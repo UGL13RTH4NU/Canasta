@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Canasta Draw</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500;1,9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #f2ecdc;
+    --paper-deep: #e5dcc2;
+    --paper-warm: #fdf9ee;
+    --ink: #1a1410;
+    --ink-soft: #4a3f34;
+    --felt: #1e4d3a;
+    --felt-light: #2a6249;
+    --felt-edge: #143528;
+    --gold: #b8935f;
+    --gold-bright: #d4b57e;
+    --amber: #a37516;
+    --amber-bg: #f6ecd2;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.5;
+    padding: 2.5rem 1.25rem 4rem;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at top, rgba(184, 147, 95, 0.08), transparent 60%),
+      repeating-linear-gradient(45deg, rgba(26, 20, 16, 0.02) 0 1px, transparent 1px 3px);
+  }
+  .wrap { max-width: 940px; margin: 0 auto; }
+
+  /* Header */
+  header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+    padding-bottom: 1.75rem;
+    position: relative;
+  }
+  header::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    transform: translateX(-50%);
+    width: 72px;
+    height: 2px;
+    background: var(--gold);
+  }
+  .kicker {
+    text-transform: uppercase;
+    letter-spacing: 0.24em;
+    font-size: 0.72rem;
+    color: var(--gold);
+    font-weight: 600;
+    margin-bottom: 0.9rem;
+  }
+  h1 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-weight: 600;
+    font-size: clamp(2.2rem, 6vw, 3.5rem);
+    letter-spacing: -0.015em;
+    line-height: 1.05;
+    margin: 0;
+    color: var(--ink);
+  }
+  h1 em {
+    font-style: italic;
+    color: var(--felt);
+    font-weight: 500;
+  }
+  .tagline {
+    color: var(--ink-soft);
+    margin-top: 0.75rem;
+    font-size: 1.02rem;
+  }
+
+  /* Input panel */
+  .input-panel {
+    background: var(--paper-warm);
+    border: 1px solid var(--paper-deep);
+    border-radius: 4px;
+    padding: 1.5rem 1.5rem 1.4rem;
+    margin-bottom: 2.5rem;
+    box-shadow: 0 1px 0 rgba(184, 147, 95, 0.2);
+  }
+  .input-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    margin-bottom: 0.85rem;
+  }
+  .input-header h2 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-weight: 600;
+    font-size: 1.35rem;
+    margin: 0;
+    color: var(--ink);
+  }
+  .count {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 1.65rem;
+    font-weight: 600;
+    color: var(--felt);
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .count small {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.7rem;
+    color: var(--ink-soft);
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin-left: 0.4rem;
+  }
+  textarea {
+    width: 100%;
+    min-height: 220px;
+    padding: 0.9rem 1rem;
+    border: 1px solid var(--paper-deep);
+    border-radius: 3px;
+    font-family: 'Inter', sans-serif;
+    font-size: 1.05rem;
+    line-height: 1.7;
+    background: #fff;
+    color: var(--ink);
+    resize: vertical;
+    /* faint ruled-paper lines */
+    background-image: repeating-linear-gradient(
+      transparent 0 calc(1.7em - 1px),
+      rgba(184, 147, 95, 0.14) calc(1.7em - 1px) 1.7em
+    );
+    background-attachment: local;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  textarea:focus {
+    outline: none;
+    border-color: var(--felt);
+    box-shadow: 0 0 0 3px rgba(30, 77, 58, 0.12);
+  }
+  .hint {
+    color: var(--ink-soft);
+    font-size: 0.88rem;
+    margin: 0.7rem 0 0;
+    font-style: italic;
+  }
+  .controls {
+    display: flex;
+    gap: 0.7rem;
+    flex-wrap: wrap;
+    margin-top: 1.25rem;
+  }
+  .btn {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.05s, box-shadow 0.05s, color 0.15s;
+  }
+  .btn-primary {
+    background: var(--felt);
+    color: var(--paper);
+    box-shadow: 0 2px 0 var(--felt-edge);
+  }
+  .btn-primary:hover { background: var(--felt-light); }
+  .btn-primary:active {
+    transform: translateY(1px);
+    box-shadow: 0 0 0 var(--felt-edge);
+  }
+  .btn-secondary {
+    background: transparent;
+    color: var(--ink-soft);
+    border: 1px solid var(--paper-deep);
+  }
+  .btn-secondary:hover {
+    background: var(--paper-deep);
+    color: var(--ink);
+  }
+
+  /* Results */
+  .results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--paper-deep);
+  }
+  .results-header h2 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-weight: 600;
+    font-size: 1.4rem;
+    margin: 0;
+  }
+  .results-header .summary {
+    color: var(--ink-soft);
+    font-size: 0.95rem;
+    font-style: italic;
+  }
+
+  .notice {
+    background: var(--amber-bg);
+    border-left: 3px solid var(--amber);
+    padding: 0.85rem 1.1rem;
+    margin-bottom: 1.25rem;
+    color: #5c4210;
+    font-size: 0.95rem;
+    border-radius: 0 3px 3px 0;
+    line-height: 1.55;
+  }
+
+  .tables {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.25rem;
+  }
+
+  /* THE SIGNATURE — green felt card tables */
+  .table {
+    background: var(--felt);
+    color: #fefaf0;
+    border-radius: 6px;
+    padding: 1.4rem 1.5rem 1.65rem;
+    position: relative;
+    background-image:
+      radial-gradient(ellipse at 30% 20%, rgba(255, 255, 255, 0.05), transparent 60%),
+      repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.018) 0 1px, transparent 1px 4px),
+      repeating-linear-gradient(-45deg, rgba(0, 0, 0, 0.03) 0 1px, transparent 1px 4px);
+    box-shadow:
+      0 1px 0 var(--felt-edge),
+      0 10px 22px rgba(20, 53, 40, 0.25),
+      inset 0 0 0 1px rgba(184, 147, 95, 0.3),
+      inset 0 0 0 5px var(--felt),
+      inset 0 0 0 6px rgba(184, 147, 95, 0.18);
+  }
+  .table-label {
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    font-size: 0.7rem;
+    color: var(--gold-bright);
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+  }
+  .table-number {
+    font-family: 'Fraunces', Georgia, serif;
+    font-weight: 600;
+    font-size: 1.7rem;
+    color: #fefaf0;
+    margin: 0 0 0.75rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.6rem;
+  }
+  .seats {
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    font-size: 0.72rem;
+    color: rgba(254, 250, 240, 0.65);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .seats.short { color: var(--gold-bright); }
+  .players {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    border-top: 1px solid rgba(184, 147, 95, 0.3);
+    padding-top: 0.85rem;
+    counter-reset: seat;
+  }
+  .players li {
+    font-size: 1.08rem;
+    padding: 0.32rem 0;
+    display: flex;
+    align-items: baseline;
+    gap: 0.65rem;
+  }
+  .players li::before {
+    content: counter(seat);
+    counter-increment: seat;
+    font-family: 'Fraunces', Georgia, serif;
+    font-style: italic;
+    font-size: 0.85rem;
+    color: var(--gold-bright);
+    font-weight: 500;
+    min-width: 1rem;
+  }
+
+  .empty {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--ink-soft);
+    font-style: italic;
+    background: var(--paper-warm);
+    border: 1px dashed var(--paper-deep);
+    border-radius: 4px;
+  }
+
+  @media (max-width: 520px) {
+    body { padding: 1.75rem 1rem 3rem; }
+    .input-panel { padding: 1.25rem; }
+    .input-header { flex-direction: column; align-items: flex-start; gap: 0.25rem; }
+    .controls .btn { flex: 1 1 auto; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+
+  @media print {
+    body { background: white; padding: 0.5in; background-image: none; }
+    .input-panel, .controls, .tagline, .kicker, header::after { display: none !important; }
+    header { border-bottom: 2px solid var(--ink); margin-bottom: 1.5rem; padding-bottom: 0.75rem; }
+    h1 em { color: var(--ink); }
+    .table {
+      background: white;
+      color: var(--ink);
+      border: 1.5px solid var(--ink);
+      box-shadow: none;
+      background-image: none;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    .table-label, .seats { color: #555; }
+    .table-number, .players li { color: var(--ink); }
+    .players li::before { color: #555; }
+    .players { border-top-color: var(--ink); }
+    .tables { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="kicker">Table Assignments</div>
+      <h1>The <em>Canasta</em> Draw</h1>
+      <div class="tagline">Enter tonight's players and we'll deal the tables.</div>
+    </header>
+
+    <section class="input-panel">
+      <div class="input-header">
+        <h2>Players present</h2>
+        <div class="count"><span id="count">0</span><small>signed in</small></div>
+      </div>
+      <textarea id="names" placeholder="Alice&#10;Betty&#10;Carol&#10;Dorothy&#10;..." spellcheck="false" aria-label="Player names, one per line"></textarea>
+      <p class="hint">One name per line. Tables of four are dealt first; if there are extras, tables of three are used so everyone plays.</p>
+      <div class="controls">
+        <button class="btn btn-primary" onclick="deal()">Deal the Tables</button>
+        <button class="btn btn-secondary" onclick="clearAll()">Clear</button>
+        <button class="btn btn-secondary" onclick="window.print()">Print</button>
+      </div>
+    </section>
+
+    <div id="output">
+      <div class="empty">Enter names above, then deal the tables.</div>
+    </div>
+  </div>
+
+<script>
+  const namesInput = document.getElementById('names');
+  const countEl = document.getElementById('count');
+  const output = document.getElementById('output');
+
+  const ORDINALS = ['One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve'];
+
+  function getNames() {
+    return namesInput.value.split('\n').map(n => n.trim()).filter(Boolean);
+  }
+  function updateCount() { countEl.textContent = getNames().length; }
+  namesInput.addEventListener('input', updateCount);
+
+  function shuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  // Solve 4a + 3b = n with a,b >= 0, maximizing a (fewer 3-tables, more 4-tables).
+  // Returns null for n=1, 2, 5 — the only counts >=1 that can't be partitioned.
+  function partition(n) {
+    for (let a = Math.floor(n / 4); a >= 0; a--) {
+      const rem = n - 4 * a;
+      if (rem % 3 === 0) return { fours: a, threes: rem / 3 };
+    }
+    return null;
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
+
+  function pluralTable(n) { return n === 1 ? 'table' : 'tables'; }
+
+  function summaryText(p) {
+    if (p.threes === 0) return p.fours + ' ' + pluralTable(p.fours) + ' of four.';
+    if (p.fours === 0)  return p.threes + ' ' + pluralTable(p.threes) + ' of three.';
+    return p.fours + ' ' + pluralTable(p.fours) + ' of four, ' +
+           p.threes + ' ' + pluralTable(p.threes) + ' of three.';
+  }
+
+  function deal() {
+    const names = getNames();
+
+    if (names.length === 0) {
+      output.innerHTML = '<div class="notice">Add some names first, then try again.</div>';
+      return;
+    }
+    if (names.length < 3) {
+      output.innerHTML = '<div class="notice">You need at least three players for one table. Right now there ' +
+        (names.length === 1 ? 'is 1 name' : 'are 2 names') + ' on the list.</div>';
+      return;
+    }
+
+    const shuffled = shuffle(names);
+    const p = partition(names.length);
+
+    // 5 is the only awkward count >= 3 — can't be split into 4s and 3s.
+    if (!p) {
+      output.innerHTML =
+        '<div class="notice">Five players can\'t be split evenly into tables of four and three. ' +
+        'Have one player sit out this round and press "Deal the Tables" again.</div>';
+      return;
+    }
+
+    const tables = [];
+    let i = 0;
+    for (let k = 0; k < p.fours; k++) {
+      tables.push({ size: 4, players: shuffled.slice(i, i + 4) });
+      i += 4;
+    }
+    for (let k = 0; k < p.threes; k++) {
+      tables.push({ size: 3, players: shuffled.slice(i, i + 3) });
+      i += 3;
+    }
+
+    let html =
+      '<div class="results-header"><h2>Tonight\'s tables</h2>' +
+      '<div class="summary">' + summaryText(p) + '</div></div>' +
+      '<div class="tables">';
+
+    tables.forEach((t, idx) => {
+      const label = ORDINALS[idx] || String(idx + 1);
+      const seatClass = t.size === 3 ? 'seats short' : 'seats';
+      html +=
+        '<div class="table">' +
+          '<div class="table-label">Table</div>' +
+          '<div class="table-number">' + label +
+            ' <span class="' + seatClass + '">' + t.size + ' seats</span>' +
+          '</div>' +
+          '<ol class="players">' +
+            t.players.map(n => '<li>' + escapeHtml(n) + '</li>').join('') +
+          '</ol>' +
+        '</div>';
+    });
+
+    html += '</div>';
+    output.innerHTML = html;
+
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    output.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+  }
+
+  function clearAll() {
+    if (namesInput.value && !confirm('Clear all names?')) return;
+    namesInput.value = '';
+    updateCount();
+    output.innerHTML = '<div class="empty">Enter names above, then deal the tables.</div>';
+  }
+</script>
+</body>
+</html>
