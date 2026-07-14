@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1e4d3a">
+  <title>Canasta Scorecard</title>
+  <style>
+    /*
+      THEME VARIABLES
+      Base palette + team colors. Team accents color the column
+      headers and running-total row so it's obvious which score belongs
+      to whom, without needing tab-switching (all teams are visible at once).
+    */
+    :root {
+      --bg: #faf7f2;
+      --card: #ffffff;
+      --ink: #1a1a1a;
+      --ink-soft: #6b6b6b;
+      --line: #e5e0d5;
+      --line-soft: #f0ebe0;
+
+      --accent: #1e4d3a;
+      --accent-dark: #143528;
+      --accent-soft: #e6f0ea;
+
+      /* Team colors */
+      --t1: #1e4d3a;     --t1-soft: #e6f0ea;
+      --t2: #a3272d;     --t2-soft: #fbe9ea;
+      --t3: #6b3a8a;     --t3-soft: #efe8f5;
+
+      --warning: #b8860b;
+      --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.04);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      -webkit-text-size-adjust: 100%;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .app {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 16px 12px 40px;
+    }
+
+    /* ---------- Header ---------- */
+    header { text-align: center; margin-bottom: 20px; }
+
+    h1 {
+      font-size: 2.75rem;
+      font-weight: 900;
+      letter-spacing: -0.01em;
+      color: var(--accent);
+      margin: 0 0 4px;
+      font-style: italic;
+      transform: skew(-6deg);
+      display: inline-block;
+      text-shadow: 2px 2px 0 var(--accent-soft);
+    }
+    .subtitle {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--ink-soft);
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    /* ---------- Mode toggle ---------- */
+    .mode-toggle {
+      display: inline-flex;
+      gap: 4px;
+      padding: 4px;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      margin-bottom: 16px;
+    }
+    .mode-btn {
+      background: transparent;
+      border: none;
+      padding: 8px 16px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--ink-soft);
+      cursor: pointer;
+      border-radius: 999px;
+      font-family: inherit;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      transition: all 0.2s ease;
+    }
+    .mode-btn.active {
+      background: var(--accent);
+      color: white;
+    }
+    .mode-btn:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    /* ---------- Team names row ---------- */
+    .team-names {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .team-names.cols-2 { grid-template-columns: 1fr 1fr; }
+    .team-names.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+    .team-name {
+      background: white;
+      border: 2px solid var(--line);
+      border-radius: 10px;
+      padding: 8px 10px;
+    }
+    .team-name.t1 { border-color: var(--t1); background: var(--t1-soft); }
+    .team-name.t2 { border-color: var(--t2); background: var(--t2-soft); }
+    .team-name.t3 { border-color: var(--t3); background: var(--t3-soft); }
+
+    .team-name-label {
+      display: block;
+      font-size: 0.6rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+    .team-name.t1 .team-name-label { color: var(--t1); }
+    .team-name.t2 .team-name-label { color: var(--t2); }
+    .team-name.t3 .team-name-label { color: var(--t3); }
+
+    .team-name input {
+      width: 100%;
+      background: transparent;
+      border: none;
+      padding: 2px 0;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--ink);
+      font-family: inherit;
+      outline: none;
+    }
+
+    /* ---------- Section cards ---------- */
+    section.card {
+      background: var(--card);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      padding: 14px 12px 12px;
+      margin-bottom: 14px;
+    }
+    .round-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin: 2px 4px 12px;
+    }
+    section.card h2 {
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--accent);
+      margin: 0;
+    }
+    .round-target {
+      font-size: 0.68rem;
+      color: var(--ink-soft);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    /* ---------- Score table ---------- */
+    table.score {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      table-layout: fixed;
+    }
+    table.score th,
+    table.score td {
+      padding: 5px 3px;
+      text-align: center;
+      border-bottom: 1px solid var(--line-soft);
+    }
+    table.score th {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--ink-soft);
+      font-weight: 800;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--line);
+    }
+    table.score th.t1-col { color: var(--t1); }
+    table.score th.t2-col { color: var(--t2); }
+    table.score th.t3-col { color: var(--t3); }
+
+    table.score th:first-child,
+    table.score td.cat {
+      text-align: left;
+      font-weight: 700;
+      color: var(--ink);
+      width: 42%;
+      padding-left: 6px;
+      font-size: 0.86rem;
+    }
+    table.score td.cat small {
+      display: block;
+      font-size: 0.62rem;
+      color: var(--ink-soft);
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      margin-top: 1px;
+    }
+
+    /* Number inputs */
+    table.score input[type="number"] {
+      width: 100%;
+      padding: 10px 2px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fafaf7;
+      font-size: 16px;
+      text-align: center;
+      color: var(--ink);
+      font-family: inherit;
+      font-weight: 700;
+      min-height: 42px;
+      -moz-appearance: textfield;
+      font-variant-numeric: tabular-nums;
+    }
+    table.score input[type="number"]::-webkit-outer-spin-button,
+    table.score input[type="number"]::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    table.score input[type="number"]:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: -1px;
+      border-color: transparent;
+    }
+
+    /* Went-out checkboxes */
+    .went-out-cell {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+    }
+    .went-out-cell input[type="checkbox"] {
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
+      accent-color: var(--accent);
+    }
+
+    /* Calculated cells */
+    td.calc {
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      color: var(--ink);
+      background: var(--line-soft);
+      font-size: 1rem;
+    }
+    tr.total-row td.calc {
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 1.05rem;
+    }
+    tr.total-row td.cat { color: var(--accent); }
+
+    tr.subtract td.cat { color: var(--t2); }
+    tr.subtract td.cat small { color: var(--t2); opacity: 0.75; }
+
+    /* ---------- Running total section ---------- */
+    .running-total-card { border: 2px solid var(--accent); }
+    .running-total-card table.score td.calc {
+      font-size: 1.2rem;
+    }
+    tr.grand-row td.calc {
+      background: var(--accent);
+      color: white;
+      font-size: 1.35rem;
+      padding: 12px 3px;
+    }
+    tr.grand-row td.cat { color: var(--accent); font-size: 0.95rem; }
+
+    .winner-panel {
+      margin-top: 14px;
+      padding: 14px;
+      background: var(--accent-soft);
+      border-radius: 10px;
+      text-align: center;
+      font-weight: 800;
+      font-size: 1.1rem;
+      color: var(--accent);
+      display: none;
+    }
+    .winner-panel.show { display: block; }
+
+    /* ---------- Footer / actions ---------- */
+    .footer-actions { margin-top: 24px; }
+    button.secondary {
+      display: block;
+      width: 100%;
+      padding: 12px;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--ink-soft);
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    button.secondary:hover { background: var(--line-soft); color: var(--ink); }
+
+    .draft-note {
+      margin-top: 20px;
+      padding: 12px 14px;
+      background: #fef8e5;
+      border-left: 3px solid var(--warning);
+      border-radius: 0 6px 6px 0;
+      font-size: 0.8rem;
+      color: #5c4a10;
+      line-height: 1.5;
+    }
+    .draft-note strong { font-weight: 800; }
+
+    /* ---------- Responsive ---------- */
+    @media (min-width: 500px) {
+      .app { padding: 20px 16px 40px; }
+      table.score th, table.score td { font-size: 0.95rem; padding: 6px 5px; }
+      table.score td.cat { font-size: 0.92rem; }
+      h1 { font-size: 3.25rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>CANASTA</h1>
+      <div class="subtitle">Score Pad · Hand and Foot</div>
+
+      <div class="mode-toggle" role="tablist" aria-label="Table format">
+        <button class="mode-btn active" data-mode="4p" onclick="setMode('4p')">4-Player Teams</button>
+        <button class="mode-btn" data-mode="3p" onclick="setMode('3p')">3-Player Solo</button>
+      </div>
+
+      <div class="team-names cols-2" id="teamNamesRow"></div>
+    </header>
+
+    <!-- Round sections are built dynamically -->
+    <div id="roundsContainer"></div>
+
+    <!-- Running total -->
+    <section class="card running-total-card">
+      <h2>Running Total</h2>
+      <table class="score" id="runningTotalTable"></table>
+      <div class="winner-panel" id="winnerPanel"></div>
+    </section>
+
+    <div class="footer-actions">
+      <button class="secondary" onclick="resetAll()">Reset All Scores</button>
+      <div class="draft-note">
+        <strong>Draft mockup.</strong> Category values and round targets are based on standard Hand and Foot rules. Adjust the constants at the top of the script — <code>CATEGORIES</code> and <code>ROUNDS</code> — to match the group's actual house rules once confirmed.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ==========================================================
+    // CONFIGURATION — edit these to match confirmed house rules
+    // ==========================================================
+
+    // Scoring categories per round. Each row is one line on the score pad.
+    // - kind 'number': player types a value directly (meld points, penalty)
+    // - kind 'count':  player enters how many (canastas, red 3s); multiplied by 'points'
+    // - kind 'toggle': checkbox worth 'points' when checked (went out bonus)
+    // - subtract: true means the value is subtracted from the round total
+    const CATEGORIES = [
+      { id: 'meld',    label: 'Meld Points',     hint: 'Face value of melded cards',      kind: 'number' },
+      { id: 'red3s',   label: 'Red 3s',          hint: '×100 each',                        kind: 'count', points: 100 },
+      { id: 'clean',   label: 'Clean Canastas',  hint: '×500 each (all natural)',          kind: 'count', points: 500 },
+      { id: 'dirty',   label: 'Dirty Canastas',  hint: '×300 each (with wilds)',           kind: 'count', points: 300 },
+      { id: 'wild',    label: 'Wild Canastas',   hint: '×1500 each (all wild)',            kind: 'count', points: 1500 },
+      { id: 'wentOut', label: 'Went Out',        hint: '+100 — only one team per round',   kind: 'toggle', points: 100 },
+      { id: 'penalty', label: 'Cards Left',      hint: 'Subtracted from round total',      kind: 'number', subtract: true }
+    ];
+
+    // Rounds and opening-meld requirements. Standard Hand and Foot is 4 rounds.
+    const ROUNDS = [
+      { num: 1, opening: 50 },
+      { num: 2, opening: 90 },
+      { num: 3, opening: 120 },
+      { num: 4, opening: 150 }
+    ];
+
+    const STORAGE_KEY = 'canasta-scorepad-mockup-v1';
+
+    // ==========================================================
+    // State
+    // ==========================================================
+
+    let mode = '4p';                        // '4p' or '3p'
+    let teamCount = 2;                       // 2 in 4p mode, 3 in 3p mode
+    let teamNames = ['', '', ''];
+    // scores[roundIndex][teamIndex] = { categoryId: value, ... }
+    let scores = [];
+
+    function initScores() {
+      scores = ROUNDS.map(() =>
+        Array.from({ length: 3 }, () => ({}))
+      );
+    }
+
+    // ==========================================================
+    // Helpers
+    // ==========================================================
+
+    function escapeHtml(s) {
+      const div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML;
+    }
+    function escapeAttr(s) {
+      return String(s).replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      })[c]);
+    }
+    function num(v) {
+      const n = parseFloat(v);
+      return isNaN(n) ? 0 : n;
+    }
+    function teamClass(i)   { return ['t1', 't2', 't3'][i]; }
+    function teamColClass(i){ return ['t1-col', 't2-col', 't3-col'][i]; }
+    function teamLabel(i) {
+      if (mode === '4p') return ['Team 1', 'Team 2'][i] || `Team ${i + 1}`;
+      return ['Player 1', 'Player 2', 'Player 3'][i] || `Player ${i + 1}`;
+    }
+    function displayName(i) {
+      return (teamNames[i] || '').trim() || teamLabel(i);
+    }
+
+    // ==========================================================
+    // Builders
+    // ==========================================================
+
+    function buildTeamNames() {
+      const row = document.getElementById('teamNamesRow');
+      row.className = 'team-names cols-' + teamCount;
+      let html = '';
+      for (let i = 0; i < teamCount; i++) {
+        html += `
+          <div class="team-name ${teamClass(i)}">
+            <span class="team-name-label">${teamLabel(i)}</span>
+            <input type="text" id="teamName-${i}" placeholder="${teamLabel(i)}" value="${escapeAttr(teamNames[i] || '')}" autocomplete="off">
+          </div>
+        `;
+      }
+      row.innerHTML = html;
+      row.querySelectorAll('input').forEach((el, i) => {
+        el.addEventListener('input', () => {
+          teamNames[i] = el.value;
+          updateHeaderNames();
+          save();
+        });
+      });
+    }
+
+    function buildRounds() {
+      const container = document.getElementById('roundsContainer');
+      let html = '';
+      ROUNDS.forEach((round, rIdx) => {
+        html += `
+          <section class="card" id="round-${round.num}">
+            <div class="round-header">
+              <h2>Round ${round.num}</h2>
+              <span class="round-target">Opens at ${round.opening}</span>
+            </div>
+            <table class="score">
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  ${Array.from({ length: teamCount }, (_, i) =>
+                    `<th class="${teamColClass(i)}" id="round-${round.num}-header-${i}">${escapeHtml(displayName(i))}</th>`
+                  ).join('')}
+                </tr>
+              </thead>
+              <tbody>
+        `;
+        CATEGORIES.forEach(cat => {
+          const rowCls = cat.subtract ? 'subtract' : '';
+          html += `<tr class="${rowCls}"><td class="cat">${cat.label}<small>${cat.hint}</small></td>`;
+          for (let t = 0; t < teamCount; t++) {
+            const inputId = `r${round.num}-${cat.id}-t${t}`;
+            if (cat.kind === 'toggle') {
+              html += `<td><div class="went-out-cell"><input type="checkbox" id="${inputId}" data-round="${rIdx}" data-team="${t}" data-cat="${cat.id}"></div></td>`;
+            } else {
+              const min = cat.kind === 'count' || cat.subtract ? '0' : '';
+              html += `<td><input type="number" inputmode="numeric" min="${min}" id="${inputId}" data-round="${rIdx}" data-team="${t}" data-cat="${cat.id}"></td>`;
+            }
+          }
+          html += '</tr>';
+        });
+        // Round total row
+        html += `<tr class="total-row"><td class="cat">Round Total</td>`;
+        for (let t = 0; t < teamCount; t++) {
+          html += `<td class="calc" id="roundTotal-r${round.num}-t${t}">0</td>`;
+        }
+        html += `</tr>`;
+        html += `</tbody></table></section>`;
+      });
+      container.innerHTML = html;
+
+      // Wire up inputs
+      container.querySelectorAll('input').forEach(el => {
+        const evt = el.type === 'checkbox' ? 'change' : 'input';
+        el.addEventListener(evt, recalc);
+      });
+    }
+
+    function buildRunningTotal() {
+      const table = document.getElementById('runningTotalTable');
+      let html = '<thead><tr><th>Round</th>';
+      for (let t = 0; t < teamCount; t++) {
+        html += `<th class="${teamColClass(t)}" id="rt-header-${t}">${escapeHtml(displayName(t))}</th>`;
+      }
+      html += '</tr></thead><tbody>';
+      ROUNDS.forEach(round => {
+        html += `<tr><td class="cat">Round ${round.num}</td>`;
+        for (let t = 0; t < teamCount; t++) {
+          html += `<td class="calc" id="rt-r${round.num}-t${t}">0</td>`;
+        }
+        html += '</tr>';
+      });
+      html += `<tr class="grand-row"><td class="cat">Grand Total</td>`;
+      for (let t = 0; t < teamCount; t++) {
+        html += `<td class="calc" id="rt-grand-t${t}">0</td>`;
+      }
+      html += `</tr></tbody>`;
+      table.innerHTML = html;
+    }
+
+    function updateHeaderNames() {
+      // Round headers
+      ROUNDS.forEach(round => {
+        for (let t = 0; t < teamCount; t++) {
+          const el = document.getElementById(`round-${round.num}-header-${t}`);
+          if (el) el.textContent = displayName(t);
+        }
+      });
+      // Running total headers
+      for (let t = 0; t < teamCount; t++) {
+        const el = document.getElementById(`rt-header-${t}`);
+        if (el) el.textContent = displayName(t);
+      }
+      updateWinnerPanel();
+    }
+
+    // ==========================================================
+    // Calculation
+    // ==========================================================
+
+    function recalc() {
+      const grandTotals = Array(teamCount).fill(0);
+
+      ROUNDS.forEach((round, rIdx) => {
+        for (let t = 0; t < teamCount; t++) {
+          let total = 0;
+          CATEGORIES.forEach(cat => {
+            const el = document.getElementById(`r${round.num}-${cat.id}-t${t}`);
+            if (!el) return;
+            let value = 0;
+            if (cat.kind === 'toggle') {
+              if (el.checked) value = cat.points;
+            } else if (cat.kind === 'count') {
+              value = num(el.value) * cat.points;
+            } else {
+              value = num(el.value);
+            }
+            if (cat.subtract) value = -value;
+            total += value;
+          });
+          // Round total
+          const rtCell = document.getElementById(`roundTotal-r${round.num}-t${t}`);
+          if (rtCell) rtCell.textContent = total;
+          // Running total row
+          const rtRunning = document.getElementById(`rt-r${round.num}-t${t}`);
+          if (rtRunning) rtRunning.textContent = total;
+          grandTotals[t] += total;
+        }
+      });
+
+      for (let t = 0; t < teamCount; t++) {
+        const grandCell = document.getElementById(`rt-grand-t${t}`);
+        if (grandCell) grandCell.textContent = grandTotals[t];
+      }
+
+      updateWinnerPanel(grandTotals);
+      saveDOMToState();
+      save();
+    }
+
+    function updateWinnerPanel(grandTotals) {
+      const panel = document.getElementById('winnerPanel');
+      if (!grandTotals) {
+        grandTotals = [];
+        for (let t = 0; t < teamCount; t++) {
+          const el = document.getElementById(`rt-grand-t${t}`);
+          grandTotals.push(el ? num(el.textContent) : 0);
+        }
+      }
+      const anyScored = grandTotals.some(v => v !== 0);
+      if (!anyScored) { panel.classList.remove('show'); return; }
+
+      const max = Math.max(...grandTotals);
+      const leaders = [];
+      grandTotals.forEach((v, i) => { if (v === max) leaders.push(i); });
+
+      let text;
+      if (leaders.length === 1) {
+        text = `🏆 ${displayName(leaders[0])} leads with ${max}`;
+      } else {
+        text = `🤝 Tied at ${max}: ${leaders.map(i => displayName(i)).join(' & ')}`;
+      }
+      panel.textContent = text;
+      panel.classList.add('show');
+    }
+
+    // ==========================================================
+    // Mode switching
+    // ==========================================================
+
+    function setMode(newMode) {
+      if (newMode === mode) return;
+      saveDOMToState();
+      mode = newMode;
+      teamCount = mode === '4p' ? 2 : 3;
+      // If any teamNames are placeholder for the old mode, clear them for a cleaner switch
+      document.querySelectorAll('.mode-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.mode === mode);
+      });
+      buildTeamNames();
+      buildRounds();
+      buildRunningTotal();
+      loadStateToDOM();
+      recalc();
+      save();
+    }
+
+    // ==========================================================
+    // Persistence
+    // ==========================================================
+
+    function saveDOMToState() {
+      ROUNDS.forEach((round, rIdx) => {
+        for (let t = 0; t < teamCount; t++) {
+          if (!scores[rIdx]) scores[rIdx] = [];
+          if (!scores[rIdx][t]) scores[rIdx][t] = {};
+          CATEGORIES.forEach(cat => {
+            const el = document.getElementById(`r${round.num}-${cat.id}-t${t}`);
+            if (!el) return;
+            scores[rIdx][t][cat.id] = cat.kind === 'toggle' ? el.checked : el.value;
+          });
+        }
+      });
+    }
+
+    function loadStateToDOM() {
+      ROUNDS.forEach((round, rIdx) => {
+        for (let t = 0; t < teamCount; t++) {
+          const roundData = (scores[rIdx] && scores[rIdx][t]) || {};
+          CATEGORIES.forEach(cat => {
+            const el = document.getElementById(`r${round.num}-${cat.id}-t${t}`);
+            if (!el) return;
+            if (cat.kind === 'toggle') {
+              el.checked = !!roundData[cat.id];
+            } else {
+              el.value = roundData[cat.id] || '';
+            }
+          });
+        }
+      });
+    }
+
+    function save() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          mode, teamNames, scores
+        }));
+      } catch (e) {}
+    }
+
+    function load() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const data = JSON.parse(raw);
+        if (data.mode) {
+          mode = data.mode;
+          teamCount = mode === '4p' ? 2 : 3;
+        }
+        if (Array.isArray(data.teamNames)) teamNames = data.teamNames;
+        if (Array.isArray(data.scores)) scores = data.scores;
+      } catch (e) {}
+    }
+
+    // ==========================================================
+    // Reset
+    // ==========================================================
+
+    function resetAll() {
+      if (!confirm('Clear all scores and start a new game? (Team names and mode kept.)')) return;
+      initScores();
+      loadStateToDOM();
+      recalc();
+      save();
+    }
+
+    // ==========================================================
+    // Init
+    // ==========================================================
+
+    function init() {
+      initScores();
+      load();
+      document.querySelectorAll('.mode-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.mode === mode);
+      });
+      buildTeamNames();
+      buildRounds();
+      buildRunningTotal();
+      loadStateToDOM();
+      recalc();
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
